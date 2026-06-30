@@ -1,11 +1,14 @@
 {
-  "name": "back101",
+  "name": "child-process-fork-examples",
   "version": "1.0.0",
+  "description": "Examples of using child_process.fork() to avoid blocking the main thread",
   "type": "module",
-  "description": "",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "incorrect:basic": "node incorrect-usage/blocking-main-thread.js",
+    "incorrect:with_server": "node incorrect-usage/blocked-server.js",
+    "correct:basic": "node correct-usage/basic-fork.js",
+    "correct:with_server": "node correct-usage/non-blocking-server.js"
   },
   "keywords": [],
   "author": "",
