@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+         <meta charset="UTF-8" />
+         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+         <title>Clase 2 - Demo Middlewares y Optimización</title>
+         <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+         <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+         <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+         <style>
+                  * {
+                           box-sizing: border-box;
+                           margin: 0;
+                           padding: 0;
+                  }
+
+                  body {
+                           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                           background: #0f172a;
+                           color: #e2e8f0;
+                           padding: 2rem;
+                  }
+
+                  h1 {
+                           color: #38bdf8;
+                           margin-bottom: 0.5rem;
+                  }
+
+                  h2 {
+                           color: #7dd3fc;
+                           margin: 1.5rem 0 0.5rem;
+                           font-size: 1.2rem;
+                  }
+
+                  .subtitle {
+                           color: #94a3b8;
+                           margin-bottom: 2rem;
+                  }
+
+                  .tabs {
+                           display: flex;
+                           gap: 0.5rem;
+                           margin-bottom: 1.5rem;
+                           flex-wrap: wrap;
+                  }
+
+                  .tab {
+                           padding: 0.5rem 1rem;
+                           border: 1px solid #334155;
+                           border-radius: 6px;
+                           background: #1e293b;
+                           color: #94a3b8;
+                           cursor: pointer;
+                           transition: all 0.2s;
+                  }
+
+                  .tab:hover {
+                           border-color: #38bdf8;
+                           color: #38bdf8;
+                  }
+
+                  .tab.active {
+                           background: #38bdf8;
+                           color: #0f172a;
+                           border-color: #38bdf8;
+                           font-weight: 600;
+                  }
+
+                  .card {
+                           background: #1e293b;
+                           border: 1px solid #334155;
+                           border-radius: 8px;
+                           padding: 1.5rem;
+                           margin-bottom: 1rem;
+                  }
+
+                  button {
+                           padding: 0.5rem 1rem;
+                           border: none;
+                           border-radius: 6px;
+                           cursor: pointer;
+                           font-size: 0.9rem;
+                           font-weight: 500;
+                           transition: all 0.2s;
+                  }
+
+                  .btn-primary {
+                           background: #38bdf8;
+                           color: #0f172a;
+                  }
+
+                  .btn-primary:hover {
+                           background: #7dd3fc;
+                  }
+
+                  .btn-danger {
+                           background: #ef4444;
+                           color: white;
+                  }
+
+                  .btn-danger:hover {
+                           background: #f87171;
+                  }
+
+                  .btn-secondary {
+                           background: #334155;
+                           color: #e2e8f0;
+                  }
+
+                  .btn-secondary:hover {
+                           background: #475569;
+                  }
+
+                  .result {
+                           margin-top: 1rem;
+                           padding: 1rem;
+                           border-radius: 6px;
+                           font-family: 'JetBrains Mono', 'Fira Code', monospace;
+                           font-size: 0.85rem;
+                           overflow-x: auto;
+                           white-space: pre-wrap;
+                           word-break: break-word;
+                  }
+
+                  .result-success {
+                           background: #064e3b;
+                           border: 1px solid #059669;
+                  }
+
+                  .result-error {
+                           background: #450a0a;
+                           border: 1px solid #dc2626;
+                  }
+
+                  .result-info {
+                           background: #1e1b4b;
+                           border: 1px solid #6366f1;
+                  }
+
+                  .metrics {
+                           display: grid;
+                           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                           gap: 1rem;
+                           margin-top: 1rem;
+                  }
+
+                  .metric-card {
+                           background: #0f172a;
+                           border: 1px solid #334155;
+                           border-radius: 6px;
+                           padding: 1rem;
+                           text-align: center;
+                  }
+
+                  .metric-value {
+                           font-size: 1.5rem;
+                           font-weight: 700;
+                           color: #38bdf8;
+                  }
+
+                  .metric-label {
+                           font-size: 0.8rem;
+                           color: #94a3b8;
+                           margin-top: 0.25rem;
+                  }
+
+                  .buttons-row {
+                           display: flex;
+                           gap: 0.5rem;
+                           flex-wrap: wrap;
+                           margin-top: 0.5rem;
+                  }
+
+                  .loading {
+                           opacity: 0.6;
+                           pointer-events: none;
+                  }
+
+                  .badge {
+                           display: inline-block;
+                           padding: 0.15rem 0.5rem;
+                           border-radius: 4px;
+                           font-size: 0.75rem;
+                           font-weight: 600;
+                  }
+
+                  .badge-green {
+                           background: #064e3b;
+                           color: #34d399;
+                  }
+
+                  .badge-red {
+                           background: #450a0a;
+                           color: #f87171;
+                  }
+
+                  .badge-yellow {
+                           background: #422006;
+                           color: #fbbf24;
+                  }
+         </style>
+</head>
+
+<body>
+         <div id="root"></div>
+         <script type="text/babel">
+                  const { useState, useCallback } = React;
+
+                  // ============================================================
+                  // COMPONENTE: EndpointLabel
+                  // ============================================================
+                  function EndpointLabel({ method, path }) {
+                           return (
+                                    <span style={{
+                                             fontSize: '0.7rem',
+                                             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                                             color: '#64748b',
+                                             marginLeft: '0.4rem',
+                                             whiteSpace: 'nowrap'
+                                    }}>
+                                             {method} {path}
+                                    </span>
+                           );
+                  }
+
+                  // ============================================================
+                  // COMPONENTE: Panel de Compresión
+                  // ============================================================
+                  function CompressionPanel() {
+                           const [results, setResults] = useState([]);
+                           const [loading, setLoading] = useState(false);
+
+                           const testCompression = async (cantidad) => {
+                                    setLoading(true);
+
+                                    try {
+                                             const response = await fetch(`/api/compression/productos/${cantidad}`);
+                                             const data = await response.json();
+
+                                             // Obtenemos info de los headers
+                                             const contentEncoding = response.headers.get('content-encoding') || 'sin compresión';
+
+                                             setResults(prev => [...prev, {
+                                                      id: Date.now(),
+                                                      cantidad,
+                                                      contentEncoding,
+                                             }]);
+                                    } catch (err) {
+                                             setResults(prev => [...prev, { id: Date.now(), error: err.message }]);
+                                    }
+                                    setLoading(false);
+                           };
+
+                           return (
+                                    <div>
+                                             <h2>Compresión HTTP (Brotli)</h2>
+                                             <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>
+                                                      Estamos usando <strong>Brotli (br)</strong>, el algoritmo de compresión más eficiente.
+                                                      Reduce el tamaño un 20-30% más que gzip.
+                                                      <br /><br />
+                                                      Abrí <strong>DevTools &gt; Network</strong> y compará la columna <strong>Size</strong> vs <strong>Transfer Size</strong>.
+                                                      El header <code>Content-Encoding: br</code> confirma que se usó Brotli.
+                                             </p>
+                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-primary" onClick={() => testCompression(10)} disabled={loading}>10 productos</button>
+                                                               <EndpointLabel method="GET" path="/api/compression/productos/10" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-primary" onClick={() => testCompression(100)} disabled={loading}>100 productos</button>
+                                                               <EndpointLabel method="GET" path="/api/compression/productos/100" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-primary" onClick={() => testCompression(500)} disabled={loading}>500 productos</button>
+                                                               <EndpointLabel method="GET" path="/api/compression/productos/500" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-primary" onClick={() => testCompression(1000)} disabled={loading}>1000 productos</button>
+                                                               <EndpointLabel method="GET" path="/api/compression/productos/1000" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-primary" onClick={() => testCompression(3000)} disabled={loading}>3000 productos</button>
+                                                               <EndpointLabel method="GET" path="/api/compression/productos/3000" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-secondary" onClick={() => setResults([])}>Limpiar</button>
+                                                      </div>
+                                             </div>
+
+                                             {results.length > 0 && (
+                                                      <div className="metrics" style={{ marginTop: '1.5rem' }}>
+                                                               {results.map(r => (
+                                                                        <div key={r.id} className="metric-card">
+                                                                                 {r.error ? (
+                                                                                          <div className="metric-value" style={{ color: '#ef4444' }}>Error</div>
+                                                                                 ) : (
+                                                                                          <>
+                                                                                                   <div className="metric-value">{r.cantidad} productos</div>
+                                                                                                   <div className="metric-label">Encoding: <span className="badge badge-green">{r.contentEncoding}</span></div>
+                                                                                                   <div className="metric-label" style={{ fontSize: '0.7rem', marginTop: '0.5rem', color: '#64748b' }}>
+                                                                                                            Ver tamaño en DevTools &gt; Network
+                                                                                                   </div>
+                                                                                          </>
+                                                                                 )}
+                                                                        </div>
+                                                               ))}
+                                                      </div>
+                                             )}
+                                    </div>
+                           );
+                  }
+
+                  // ============================================================
+                  // COMPONENTE: Panel de Cache
+                  // ============================================================
+                  function CachePanel() {
+                           const [results, setResults] = useState([]);
+                           const [loading, setLoading] = useState(false);
+
+                           const testCache = async (endpoint, label) => {
+                                    setLoading(true);
+                                    const start = performance.now();
+                                    try {
+                                             const response = await fetch(`/api/cache/${endpoint}`);
+                                             const end = performance.now();
+                                             const data = await response.json();
+                                             const cacheControl = response.headers.get('cache-control') || 'no especificado';
+                                             const tiempo = (end - start).toFixed(0);
+                                             const fromCache = response.headers.get('x-from-cache') || (tiempo < 50 ? 'probable' : 'no');
+
+                                             setResults(prev => [...prev, {
+                                                      id: Date.now(),
+                                                      label,
+                                                      tiempoMs: tiempo,
+                                                      cacheControl,
+                                                      timestamp: data.meta?.timestamp || new Date().toISOString(),
+                                                      fromCache: fromCache === 'probable' || fromCache === 'yes',
+                                             }]);
+                                    } catch (err) {
+                                             setResults(prev => [...prev, { id: Date.now(), label, error: err.message }]);
+                                    }
+                                    setLoading(false);
+                           };
+
+                           return (
+                                    <div>
+                                             <h2>Cache Control - Demos</h2>
+                                             <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>
+                                                      Cada endpoint simula un proceso pesado en el servidor (~800ms de delay + datos grandes).
+                                                      Hacé click varias veces: en "cache-corto" y "cache-largo" la segunda vez debería ser instantánea (viene de caché del navegador).
+                                                      <br /><br />
+                                                      <strong>Tip:</strong> Abrí DevTools &gt; Network para ver "disk cache" o "memory cache" en la columna Size.
+                                             </p>
+                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-danger" onClick={() => testCache('sin-cache', 'Sin Caché')} disabled={loading}>Sin Caché (no-store)</button>
+                                                               <EndpointLabel method="GET" path="/api/cache/sin-cache" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-primary" onClick={() => testCache('cache-corto', 'Caché 60s')} disabled={loading}>Caché Corto (60s)</button>
+                                                               <EndpointLabel method="GET" path="/api/cache/cache-corto" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-secondary" onClick={() => testCache('cache-largo', 'Caché 24h')} disabled={loading}>Caché Largo (24h)</button>
+                                                               <EndpointLabel method="GET" path="/api/cache/cache-largo" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-secondary" onClick={() => setResults([])}>Limpiar</button>
+                                                      </div>
+                                             </div>
+
+                                             {results.length > 0 && (
+                                                      <div style={{ marginTop: '1rem' }}>
+                                                               {results.map(r => (
+                                                                        <div key={r.id} className="card" style={{ padding: '0.75rem', marginBottom: '0.5rem' }}>
+                                                                                 <strong>{r.label}</strong>
+                                                                                 {r.error ? (
+                                                                                          <span className="badge badge-red" style={{ marginLeft: '0.5rem' }}>{r.error}</span>
+                                                                                 ) : (
+                                                                                          <>
+                                                                                                   <span className="badge badge-green" style={{ marginLeft: '0.5rem' }}>{r.cacheControl}</span>
+                                                                                                   <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                                                                                                            <span style={{ color: r.fromCache ? '#34d399' : '#fbbf24' }}>
+                                                                                                                     {r.fromCache ? 'Desde caché del navegador' : 'Request real al servidor'}
+                                                                                                            </span>
+                                                                                                            {' — '}
+                                                                                                            <span style={{ color: '#94a3b8' }}>{r.tiempoMs}ms</span>
+                                                                                                   </div>
+                                                                                                   <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                                                                                            Timestamp del server: {r.timestamp}
+                                                                                                   </div>
+                                                                                          </>
+                                                                                 )}
+                                                                        </div>
+                                                               ))}
+                                                      </div>
+                                             )}
+                                    </div>
+                           );
+                  }
+
+                  // ============================================================
+                  // COMPONENTE: Panel de Errores
+                  // ============================================================
+                  function ErrorsPanel() {
+                           const [result, setResult] = useState(null);
+
+                           const testError = async (endpoint, label) => {
+                                    try {
+                                             const response = await fetch(`/api/errors/${endpoint}`);
+                                             const data = await response.json();
+                                             setResult({ label, status: response.status, data, isError: !response.ok });
+                                    } catch (err) {
+                                             setResult({ label, status: 0, data: { error: err.message }, isError: true });
+                                    }
+                           };
+
+                           return (
+                                    <div>
+                                             <h2>Manejo de Errores - Comparación</h2>
+                                             <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>
+                                                      Compará las respuestas: sin middleware los errores son inconsistentes.
+                                                      Con middleware siempre tienen el mismo formato.
+                                                      Observá que en producción NO se muestran detalles sensibles (stack, details).
+                                             </p>
+
+                                             <div className="card">
+                                                      <h3 style={{ marginBottom: '0.5rem', color: '#fbbf24' }}>Sin Middleware (anti-patrón)</h3>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('sin-middleware/abc', 'ID inválido')}>ID inválido</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/sin-middleware/abc" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('sin-middleware/999', 'No encontrado')}>No encontrado</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/sin-middleware/999" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-primary" onClick={() => testError('sin-middleware/5', 'Éxito')}>Éxito</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/sin-middleware/5" />
+                                                               </div>
+                                                      </div>
+                                             </div>
+
+                                             <div className="card">
+                                                      <h3 style={{ marginBottom: '0.5rem', color: '#34d399' }}>Con Middleware (patrón correcto)</h3>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('con-middleware/abc', 'Validación')}>Error Validación</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/con-middleware/abc" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('con-middleware/999', 'No encontrado')}>No Encontrado</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/con-middleware/999" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('con-middleware/50', 'Sin Stock')}>Sin Stock</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/con-middleware/50" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-primary" onClick={() => testError('con-middleware/5', 'Éxito')}>Éxito</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/con-middleware/5" />
+                                                               </div>
+                                                      </div>
+                                             </div>
+
+                                             <div className="card">
+                                                      <h3 style={{ marginBottom: '0.5rem', color: '#f87171' }}>Errores Async (edge cases)</h3>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('async-no-atrapado', 'Timeout')}>Async NO atrapado (timeout)</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/async-no-atrapado" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-primary" onClick={() => testError('async-correcto', 'Async correcto')}>Async CORRECTO</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/async-correcto" />
+                                                               </div>
+
+                                                      </div>
+                                             </div>
+
+                                             <div className="card">
+                                                      <h3 style={{ marginBottom: '0.5rem', color: '#ef4444' }}>Errores NO Operacionales (bugs reales)</h3>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('bug-real', 'TypeError')}>Bug: undefined.map()</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/bug-real" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testError('referencia-invalida', 'ReferenceError')}>Bug: variable no definida</button>
+                                                                        <EndpointLabel method="GET" path="/api/errors/referencia-invalida" />
+                                                               </div>
+                                                      </div>
+                                                      <p style={{ color: '#94a3b8', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                                               Estos errores NO son operacionales (no son AppError). Son bugs del código que el middleware atrapa igual.
+                                                               En desarrollo se ve el stack trace completo. En producción solo se muestra "Ocurrió un error interno del servidor".
+                                                      </p>
+                                             </div>
+
+                                             {result && (
+                                                      <div className={`result ${result.isError ? 'result-error' : 'result-success'}`}>
+                                                               <div style={{ marginBottom: '0.5rem' }}>
+                                                                        <strong>{result.label}</strong>
+                                                                        <span className={`badge ${result.isError ? 'badge-red' : 'badge-green'}`} style={{ marginLeft: '0.5rem' }}>
+                                                                                 Status: {result.status}
+                                                                        </span>
+                                                               </div>
+                                                               {JSON.stringify(result.data, null, 2)}
+                                                      </div>
+                                             )}
+                                    </div>
+                           );
+                  }
+
+                  // ============================================================
+                  // COMPONENTE: Panel de Respuestas Normalizadas
+                  // ============================================================
+                  function ResponsesPanel() {
+                           const [result, setResult] = useState(null);
+
+                           const testResponse = async (endpoint, options = {}) => {
+                                    try {
+                                             const response = await fetch(`/api/responses/${endpoint}`, options);
+                                             const data = await response.json();
+                                             setResult({ status: response.status, data, isError: !response.ok });
+                                    } catch (err) {
+                                             setResult({ status: 0, data: { error: err.message }, isError: true });
+                                    }
+                           };
+
+                           return (
+                                    <div>
+                                             <h2>Normalización de Respuestas</h2>
+                                             <p style={{ color: '#94a3b8', marginBottom: '1rem' }}>
+                                                      Compará las respuestas: con normalización siempre tienen el mismo formato.
+                                                      Sin normalización, cada endpoint responde distinto y el frontend no sabe qué esperar.
+                                             </p>
+
+                                             <div className="card" style={{ borderColor: '#34d399' }}>
+                                                      <h3 style={{ marginBottom: '0.5rem', color: '#34d399' }}>Con Normalización (patrón correcto)</h3>
+                                                      <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                                                               Usan los helpers sendSuccess, sendError, sendPaginated. El frontend siempre recibe &#123; status, data, meta &#125; o &#123; status, error &#125;.
+                                                      </p>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-primary" onClick={() => testResponse('producto/1')}>Producto OK</button>
+                                                                        <EndpointLabel method="GET" path="/api/responses/producto/1" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-primary" onClick={() => testResponse('productos?page=2&limit=5')}>Lista paginada</button>
+                                                                        <EndpointLabel method="GET" path="/api/responses/productos?page=2&limit=5" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testResponse('producto', {
+                                                                                 method: 'POST',
+                                                                                 headers: { 'Content-Type': 'application/json' },
+                                                                                 body: JSON.stringify({ nombre: '' })
+                                                                        })}>Crear sin datos (error)</button>
+                                                                        <EndpointLabel method="POST" path="/api/responses/producto" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-primary" onClick={() => testResponse('producto', {
+                                                                                 method: 'POST',
+                                                                                 headers: { 'Content-Type': 'application/json' },
+                                                                                 body: JSON.stringify({ nombre: 'Mouse Gamer', precio: 45000 })
+                                                                        })}>Crear producto (OK)</button>
+                                                                        <EndpointLabel method="POST" path="/api/responses/producto" />
+                                                               </div>
+                                                      </div>
+                                             </div>
+
+                                             <div className="card" style={{ borderColor: '#fbbf24', marginTop: '1rem' }}>
+                                                      <h3 style={{ marginBottom: '0.5rem', color: '#fbbf24' }}>Sin Normalización (anti-patrón)</h3>
+                                                      <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                                                               Cada endpoint responde con formato distinto. El frontend tiene que manejar casos especiales para cada uno.
+                                                      </p>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testResponse('mal-ejemplo/producto/1')}>GET Producto (sin normalizar)</button>
+                                                                        <EndpointLabel method="GET" path="/api/responses/mal-ejemplo/producto/1" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testResponse('mal-ejemplo/producto', {
+                                                                                 method: 'POST',
+                                                                                 headers: { 'Content-Type': 'application/json' },
+                                                                                 body: JSON.stringify({})
+                                                                        })}>POST Error (sin normalizar)</button>
+                                                                        <EndpointLabel method="POST" path="/api/responses/mal-ejemplo/producto" />
+                                                               </div>
+                                                               <div className="buttons-row">
+                                                                        <button className="btn-danger" onClick={() => testResponse('mal-ejemplo/producto', {
+                                                                                 method: 'POST',
+                                                                                 headers: { 'Content-Type': 'application/json' },
+                                                                                 body: JSON.stringify({ nombre: 'Teclado', precio: 25000 })
+                                                                        })}>POST OK (sin normalizar)</button>
+                                                                        <EndpointLabel method="POST" path="/api/responses/mal-ejemplo/producto" />
+                                                               </div>
+                                                      </div>
+                                             </div>
+
+                                             {result && (
+                                                      <div className={`result ${result.isError ? 'result-error' : 'result-success'}`}>
+                                                               <span className={`badge ${result.isError ? 'badge-red' : 'badge-green'}`}>
+                                                                        Status: {result.status}
+                                                               </span>
+                                                               {"\n"}{JSON.stringify(result.data, null, 2)}
+                                                      </div>
+                                             )}
+                                    </div>
+                           );
+                  }
+
+                  // ============================================================
+                  // COMPONENTE: Panel de Orders (para analizar malas prácticas)
+                  // ============================================================
+                  function OrdersPanel() {
+                           const [result, setResult] = useState(null);
+
+                           const testOrder = async (endpoint, options = {}) => {
+                                    try {
+                                             const response = await fetch(`/api/orders${endpoint}`, options);
+                                             const text = await response.text();
+                                             let data;
+                                             try { data = JSON.parse(text); } catch { data = text; }
+                                             setResult({ status: response.status, data, isError: !response.ok });
+                                    } catch (err) {
+                                             setResult({ status: 0, data: { error: err.message }, isError: true });
+                                    }
+                           };
+
+                           return (
+                                    <div>
+                                             <h2>Orders - Para Analizar en Clase</h2>
+                                             <p style={{ color: '#f87171', marginBottom: '1rem' }}>
+                                                      Este controlador tiene MALAS PRACTICAS intencionales. Analicemos:
+                                                      formatos inconsistentes, datos sensibles expuestos, sin cache, sin normalización.
+                                             </p>
+                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-danger" onClick={() => testOrder('/1')}>GET Orden #1</button>
+                                                               <EndpointLabel method="GET" path="/api/orders/1" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-danger" onClick={() => testOrder('/999')}>GET Orden inexistente</button>
+                                                               <EndpointLabel method="GET" path="/api/orders/999" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-danger" onClick={() => testOrder('/', {
+                                                                        method: 'POST',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({})
+                                                               })}>POST Crear sin datos</button>
+                                                               <EndpointLabel method="POST" path="/api/orders" />
+                                                      </div>
+                                                      <div className="buttons-row">
+                                                               <button className="btn-danger" onClick={() => testOrder('/', {
+                                                                        method: 'POST',
+                                                                        headers: { 'Content-Type': 'application/json' },
+                                                                        body: JSON.stringify({ userId: 99, items: [{ productId: 1, name: "Test", price: 1000, qty: 1 }] })
+                                                               })}>POST Crear orden OK</button>
+                                                               <EndpointLabel method="POST" path="/api/orders" />
+                                                      </div>
+                                             </div>
+
+                                             <div className="card" style={{ marginTop: '1rem', borderColor: '#fbbf24' }}>
+                                                      <h3 style={{ color: '#fbbf24', marginBottom: '0.5rem' }}>Preguntas para analizar:</h3>
+                                                      <ul style={{ color: '#94a3b8', fontSize: '0.9rem', paddingLeft: '1.2rem' }}>
+                                                               <li>Que datos sensibles se estan exponiendo?</li>
+                                                               <li>Los formatos de respuesta son consistentes entre endpoints?</li>
+                                                               <li>Que pasa si hay un error inesperado en el POST?</li>
+                                                               <li>Se podria cachear algun endpoint? Cual?</li>
+                                                               <li>Como aplicarías el middleware de errores aca?</li>
+                                                               <li>Que status codes estan mal usados?</li>
+                                                      </ul>
+                                             </div>
+
+                                             {result && (
+                                                      <div className={`result ${result.isError ? 'result-error' : 'result-info'}`}>
+                                                               <span className={`badge ${result.isError ? 'badge-red' : 'badge-yellow'}`}>
+                                                                        Status: {result.status}
+                                                               </span>
+                                                               {"\n"}{typeof result.data === 'string' ? result.data : JSON.stringify(result.data, null, 2)}
+                                                      </div>
+                                             )}
+                                    </div>
+                           );
+                  }
+
+                  // ============================================================
+                  // APP PRINCIPAL
+                  // ============================================================
+                  function App() {
+                           const [activeTab, setActiveTab] = useState('compression');
+
+                           const tabs = [
+                                    { id: 'compression', label: 'Compresión HTTP' },
+                                    { id: 'cache', label: 'Cache Control' },
+                                    { id: 'responses', label: 'Respuestas JSON' },
+                                    { id: 'errors', label: 'Manejo de Errores' },
+                                    { id: 'orders', label: 'Orders (Analizar)' },
+                           ];
+
+                           return (
+                                    <div>
+                                             <h1>Clase 2 - Middlewares y Optimización</h1>
+                                             <p className="subtitle">Express.js - Ecommerce Demo</p>
+
+                                             <div className="tabs">
+                                                      {tabs.map(tab => (
+                                                               <div
+                                                                        key={tab.id}
+                                                                        className={`tab ${activeTab === tab.id ? 'active' : ''}`}
+                                                                        onClick={() => setActiveTab(tab.id)}
+                                                               >
+                                                                        {tab.label}
+                                                               </div>
+                                                      ))}
+                                             </div>
+
+                                             <div className="card">
+                                                      {activeTab === 'compression' && <CompressionPanel />}
+                                                      {activeTab === 'cache' && <CachePanel />}
+                                                      {activeTab === 'responses' && <ResponsesPanel />}
+                                                      {activeTab === 'errors' && <ErrorsPanel />}
+                                                      {activeTab === 'orders' && <OrdersPanel />}
+                                             </div>
+                                    </div>
+                           );
+                  }
+
+                  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+         </script>
+</body>
+
+</html>
